@@ -1,0 +1,15 @@
+{
+    "name": "Web App Billede",
+    "short_name": "BilledeApp",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#01152e",
+    "theme_color": "#01152e",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Web App - Billede</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Kørekort">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+        }
+
+        /* Fjernet overflow fra body og html */
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Lexend', sans-serif;
+            background-color: #01152e;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;  /* Forhindrer scroll */
+            touch-action: none; /* Forhindrer touch drag */
+            -webkit-overflow-scrolling: touch; /* Forhindrer scroll på mobile enheder */
+        }
+
+        /* Fixet min-height og scroll problemer */
+        html {
+            min-height: 100vh;
+            height: 100%;
+        }
+
+        #app {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .full-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .date-time {
+            position: absolute;
+            bottom: 19.9vh;
+            left: 60%;
+            transform: translateX(-50%);
+            color: #282661;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        /* Alle click areas */
+        #click-area, #click-area-menu-back, #click-area-zoom, #click-area-kortinfo, #click-area-kørekort, #click-area-scan, #click-area-back, #click-area-kortinfo-menu, #click-area-menu-back-kortinfo, #click-area-kontrol, #click-area-kontrol-menu, #click-area-kontrol-menu-back {
+            position: absolute;
+            cursor: pointer;
+            display: block;
+            z-index: 5;
+        }
+
+        #click-area {
+            top: 8vh;
+            right: 3vw;
+            width: 7vw;
+            height: 3vh;
+        }
+
+        #click-area-menu-back {
+            top: 8vh;
+            left: 3.5vw;
+            width: 6vw;
+            height: 4vh;
+        }
+
+        #click-area-zoom {
+            top: 13.5vh;
+            left: 51vw;
+            width: 46vw;
+            height: 25vh;
+        }
+
+        #click-area-kortinfo,
+        #click-area-kørekort,
+        #click-area-kontrol,
+        #click-area-scan {
+            bottom: 1vh;
+            width: 15vw;
+            height: 8vh;
+        }
+
+        #click-area-kortinfo { left: 30vw; }
+        #click-area-kørekort { left: 5vw; }
+        #click-area-kontrol { left: 80vw; }
+        #click-area-scan { left: 55vw; }
+
+        #click-area-kortinfo-menu,
+        #click-area-menu-back-kortinfo,
+        #click-area-kontrol-menu,
+        #click-area-kontrol-menu-back {
+            display: none;
+        }
+
+        #click-area-kortinfo-menu,
+        #click-area-kontrol-menu {
+            top: 8vh;
+            right: 3vw;
+            width: 7vw;
+            height: 3vh;
+        }
+
+        #click-area-menu-back-kortinfo,
+        #click-area-kontrol-menu-back {
+            top: 8vh;
+            left: 3.5vw;
+            width: 6vw;
+            height: 4vh;
+        }
+
+        #video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: black;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3;
+        }
+
+        #video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 3;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        #qrCanvas {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 360px;
+            height: 350px;
+            display: none;
+            z-index: 6;
+        }
+
+        #intro-video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #intro-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+        <div id="app">
+            <div id="intro-video-container" style="display: flex;">
+                <video id="intro-video" autoplay muted playsinline>
+                    <source src="intro.mp4" type="video/mp4">
+                </video>
+            </div>    
+    <div class="scale-wrapper">
+            <div id="click-area"></div>
+            <div id="click-area-menu-back"></div>
+            <div id="click-area-zoom"></div>
+            <div id="click-area-kortinfo"></div>
+            <div id="click-area-kørekort"></div>
+            <div id="click-area-kortinfo-menu"></div>
+            <div id="click-area-menu-back-kortinfo"></div>
+            <div id="click-area-scan"></div>
+            <div id="click-area-kontrol"></div>
+            <div id="click-area-kontrol-menu"></div>
+            <div id="click-area-kontrol-menu-back"></div>
+
+            <div class="image-container">
+                <img id="image" src="side1.png" alt="Billede" class="full-image">
+            </div>
+
+            <div id="video-container">
+                <video id="video" autoplay muted playsinline></video>
+                <img id="overlay" src="scan.png" alt="Scan overlay">
+            </div>
+
+            <canvas id="qrCanvas" width="360" height="350"></canvas>
+
+            <div class="date-time" id="date-time"></div>
+        </div>
+    </div>
+    <script>
+        const imageElement = document.getElementById("image");
+        const clickArea = document.getElementById("click-area");
+        const clickAreaMenuBack = document.getElementById("click-area-menu-back");
+        const clickAreaZoom = document.getElementById("click-area-zoom");
+        const clickAreaKortinfo = document.getElementById("click-area-kortinfo");
+        const clickAreaKørekort = document.getElementById("click-area-kørekort");
+        const clickAreaKortinfoMenu = document.getElementById("click-area-kortinfo-menu");
+        const clickAreaMenuBackKortinfo = document.getElementById("click-area-menu-back-kortinfo");
+        const clickAreaKontrol = document.getElementById("click-area-kontrol");
+        const clickAreaKontrolMenu = document.getElementById("click-area-kontrol-menu");
+        const clickAreaKontrolMenuBack = document.getElementById("click-area-kontrol-menu-back");
+        const clickAreaScan = document.getElementById("click-area-scan");
+        const videoContainer = document.getElementById("video-container");
+        const video = document.getElementById("video");
+        const overlay = document.getElementById("overlay");
+        const date = document.getElementById("date-time");
+
+        const qrCanvas = document.getElementById("qrCanvas");
+        const ctx = qrCanvas.getContext("2d");
+        let qrInterval = null;
+        let stream = null;
+
+        function updateDateTime() {
+            const now = new Date();
+            const day = now.getDate();
+            const month = now.toLocaleString('da-DK', { month: 'long' });
+            const year = now.getFullYear();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+
+            const formattedDate = `${day} ${month} ${year} kl. ${hours}:${minutes}`;
+            document.getElementById('date-time').textContent = formattedDate;
+        }
+
+        // Opdater dato og tid hver minut
+        setInterval(updateDateTime, 60000);
+
+        // Initial visning af dato og tid
+        updateDateTime();
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.srcObject = null;
+            }
+        }
+
+        function drawFakeQRCode() {
+            ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+            const pixelSize = 5;
+            const gridWidth = Math.floor(qrCanvas.width / pixelSize);
+            const gridHeight = Math.floor(qrCanvas.height / pixelSize);
+
+            // Tegner tilfældige pixels i sort/hvid
+            for (let x = 0; x < gridWidth; x++) {
+                for (let y = 0; y < gridHeight; y++) {
+                    ctx.fillStyle = Math.random() > 0.5 ? "black" : "white";
+                    ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                }
+            }
+
+            const eyeSize = pixelSize * 7;
+            // const smallEyeSize = pixelSize * 5;
+            const borderSize = pixelSize; // 1 pixel bred kant
+            const innerEyeSize = pixelSize * 3;
+            const innerOffset = pixelSize * 2; // Afstand fra kanten til den indre firkant
+
+            function drawEye(x, y) {
+                // Yderkant (1 pixel bred)
+                ctx.fillStyle = "black";
+                ctx.fillRect(x, y, eyeSize, eyeSize);
+
+                // Indre hvid firkant
+                ctx.fillStyle = "white";
+                ctx.fillRect(x + borderSize, y + borderSize, eyeSize - 2 * borderSize, eyeSize - 2 * borderSize);
+
+                // Inderste sorte firkant (3x3 pixels)
+                ctx.fillStyle = "black";
+                ctx.fillRect(x + innerOffset, y + innerOffset, innerEyeSize, innerEyeSize);
+            }
+
+            /* function drawSmallEye(x, y) {
+                // Yderkant (1 pixel bred)
+                ctx.fillStyle = "black";
+                ctx.fillRect(x, y, smallEyeSize, smallEyeSize);
+
+                // Indre hvid firkant
+                ctx.fillStyle = "white";
+                ctx.fillRect(x + borderSize, y + borderSize, smallEyeSize - 2 * borderSize, smallEyeSize - 2 * borderSize);
+
+                // Midterste sorte pixel (1x1)
+                ctx.fillStyle = "black";
+                ctx.fillRect(x + 2 * pixelSize, y + 2 * pixelSize, pixelSize, pixelSize);
+            } */
+
+            // Placerer de fire store hjørnemarkører
+            drawEye(0, 0); // Øverste venstre hjørne
+            drawEye(qrCanvas.width - eyeSize, 0); // Øverste højre hjørne
+            drawEye(0, qrCanvas.height - eyeSize); // Nederste venstre hjørne
+            drawEye(qrCanvas.width - eyeSize, qrCanvas.height - eyeSize); // Nederste højre hjørne
+
+            // Beregner midtpunkt og placeringer af small eyes
+            //const offset = pixelSize * 4; // Afstand fra kanten
+            //const centerX = qrCanvas.width / 2;
+            //const centerY = qrCanvas.height / 2;
+            //const lineGap = pixelSize * 10; // Afstand mellem linjerne i #
+
+            /*const positions = [
+                // Nederste lodrette ender af #
+                [centerX - lineGap, qrCanvas.height - offset - smallEyeSize], // Venstre lodrette bund
+                [centerX + lineGap, qrCanvas.height - offset - smallEyeSize], // Højre lodrette bund
+
+                // Midterste vandrette streger - ender
+                [offset, centerY - lineGap], // Venstre ende af øverste vandrette streg
+                [qrCanvas.width - offset - smallEyeSize, centerY - lineGap], // Højre ende af øverste vandrette streg
+                [offset, centerY + lineGap - smallEyeSize], // Venstre ende af nederste vandrette streg
+                [qrCanvas.width - offset - smallEyeSize, centerY + lineGap - smallEyeSize], // Højre ende af nederste vandrette streg
+
+                // Midterste vandrette streger - skæringer (de to gange hvor den skærer med de lodrette streger)
+                [centerX - lineGap, centerY - 25 - smallEyeSize], // Skæring venstre top
+                [centerX + lineGap, centerY - 25 - smallEyeSize], // Skæring højre top
+                [centerX - lineGap, centerY + smallEyeSize], // Skæring venstre bund
+                [centerX + lineGap, centerY + smallEyeSize], // Skæring højre bund
+
+                // Øverste lodrette ender af #
+                [centerX - lineGap, offset], // Venstre lodrette top
+                [centerX + lineGap, offset] // Højre lodrette top
+            ];
+
+            // Tegner de små "eyes"
+            positions.forEach(([x, y]) => drawSmallEye(x, y)); */
+        }
+
+
+        function startQRCode() {
+            qrCanvas.style.display = "block";
+            drawFakeQRCode();
+            qrInterval = setInterval(drawFakeQRCode, 450);
+        }
+
+        function stopQRCode() {
+            qrCanvas.style.display = "none";
+            if (qrInterval) {
+                clearInterval(qrInterval);
+                qrInterval = null;
+            }
+        }
+
+        clickArea.addEventListener("click", function() {
+            imageElement.src = "menu.png";
+            clickArea.style.display = "none";
+            clickAreaMenuBack.style.display = "block";
+            clickAreaZoom.style.display = "none";
+            clickAreaKørekort.style.display = "none";
+            clickAreaKortinfo.style.display = "none";
+            clickAreaScan.style.display = "none";
+            clickAreaKontrol.style.display = "none";
+            clickAreaKontrolMenu.style.display = "none";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaMenuBack.addEventListener("click", function() {
+            imageElement.src = "side1.png";
+            clickArea.style.display = "block";
+            clickAreaMenuBack.style.display = "none";
+            clickAreaKontrol.style.display = "block";
+            clickAreaKontrolMenu.style.display = "none";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaZoom.addEventListener("click", function() {
+            imageElement.src = "forstørretbillede.png";
+            clickAreaZoom.style.display = "none";
+            clickArea.style.display = "none";
+            clickAreaMenuBack.style.display = "block";
+            clickAreaKørekort.style.display = "none";
+            clickAreaKortinfo.style.display = "none";
+            clickAreaScan.style.display = "none";
+            clickAreaKontrol.style.display ="none";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaKortinfo.addEventListener("click", function() {
+            imageElement.src = "kortinfo.png";
+            clickArea.style.display = "none";
+            clickAreaMenuBack.style.display = "none";
+            clickAreaZoom.style.display = "none";
+            videoContainer.style.display = "none";
+            imageElement.style.display = "block";
+            clickAreaKortinfoMenu.style.display = "block";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaKørekort.addEventListener("click", function() {
+            imageElement.src = "side1.png";
+            clickArea.style.display = "none";
+            clickAreaMenuBack.style.display = "block";
+            clickAreaZoom.style.display = "none";
+            videoContainer.style.display = "none";
+            imageElement.style.display = "block";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaKortinfoMenu.addEventListener("click", function() {
+            imageElement.src = "menukortinfo.png";
+            clickAreaKortinfo.style.display = "none";
+            clickAreaKortinfoMenu.style.display = "none";
+            clickAreaMenuBackKortinfo.style.display = "block";
+            clickAreaKørekort.style.display = "none";
+            clickAreaScan.style.display = "none";
+            clickAreaKontrol.style.display = "none";
+            date.style.display = "none";
+            stopQRCode();
+        });
+        
+        clickAreaMenuBackKortinfo.addEventListener("click", function() {
+            imageElement.src = "kortinfo.png";
+            clickAreaKørekort.style.display = "block";
+            clickAreaKortinfo.style.display = "block";
+            clickAreaKortinfoMenu.style.display = "block";
+            clickAreaMenuBackKortinfo.style.display = "none";
+            clickAreaScan.style.display = "block";
+            clickAreaKontrol.style.display = "block";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaScan.addEventListener("click", function() {
+            imageElement.style.display = "none";
+            videoContainer.style.display = "flex";
+            clickAreaScan.style.display = "block";
+            clickArea.style.display = "none";
+            clickAreaZoom.style.display = "none";
+            clickAreaKørekort.style.display = "block";
+            clickAreaKortinfo.style.display = "block";
+            clickAreaKortinfoMenu.style.display = "none";
+            clickArea.style.display = "none";
+            clickAreaKontrolMenu.style.display = "none";
+            date.style.display = "none";
+            stopQRCode();
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+                .then(function(mediaStream) {
+                    stream = mediaStream;
+                    video.srcObject = stream;
+                    video.play();
+                })
+                .catch(function(error) {
+                    console.error("Fejl ved adgang til kamera: ", error);
+                    alert("Kunne ikke få adgang til kameraet: " + error.message);
+                    videoContainer.style.display = "none";
+                    imageElement.style.display = "block";
+                });
+        });
+
+        clickAreaKontrol.addEventListener("click", function() {
+            imageElement.src = "kontrol.png";
+            clickAreaKørekort.style.display = "block";
+            clickAreaKortinfo.style.display = "block";
+            clickArea.style.display = "none";
+            clickAreaZoom.style.display = "none";
+            clickAreaKontrolMenu.style.display = "block";
+            videoContainer.style.display = "none";
+            imageElement.style.display = "block";
+            date.style.display = "none";
+            startQRCode();
+            stopCamera();
+        });
+
+        clickAreaKontrolMenu.addEventListener("click", function() {
+            imageElement.src = "menukontrol.png";
+            clickAreaKortinfo.style.display = "none";
+            clickAreaKortinfoMenu.style.display = "none";
+            clickAreaKørekort.style.display = "none";
+            clickAreaScan.style.display = "none";
+            clickAreaKontrol.style.display = "none";
+            clickAreaKontrolMenu.style.display = "none";
+            clickAreaKontrolMenuBack.style.display = "block";
+            date.style.display = "none";
+            stopQRCode();
+        });
+
+        clickAreaKontrolMenuBack.addEventListener("click", function() {
+            imageElement.src = "kontrol.png";
+            clickAreaKørekort.style.display = "block";
+            clickAreaKortinfo.style.display = "block";
+            clickAreaKontrol.style.display = "block";
+            clickAreaKontrolMenu.style.display = "block";
+            clickAreaScan.style.display = "block";
+            clickAreaMenuBack.style.display = "none";
+            clickAreaKontrolMenuBack.style.display = "none";
+            date.style.display = "none";
+            startQRCode();
+        });
+
+        imageElement.addEventListener("load", function() {
+            if (imageElement.src.includes("side1.png")) {
+                clickArea.style.display = "block";
+                clickAreaZoom.style.display = "block";
+                clickAreaMenuBack.style.display = "none";
+                clickAreaKørekort.style.display = "block";
+                clickAreaKortinfo.style.display = "block";
+                clickAreaKortinfoMenu.style.display = "none";
+                clickAreaScan.style.display = "block";
+                clickAreaKontrol.style.display = "block";
+                videoContainer.style.display = "none";
+                imageElement.style.display = "block";
+                date.style.display = "block";
+                clickAreaKontrolMenu.style.display = "none";
+                stopCamera();
+                stopQRCode();
+            } else if (imageElement.src.includes("kontrol.png")) {
+                startQRCode();
+                stopCamera();
+            } else {
+                stopQRCode();
+            }
+        });
+
+        imageElement.addEventListener("load", function() {
+            if (imageElement.src.includes("menukontrol.png")) {
+                stopQRCode();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            const introContainer = document.getElementById('intro-video-container');
+            const introVideo = document.getElementById('intro-video');
+
+            // Gør containeren synlig igen ved refresh
+            introContainer.style.display = 'flex';
+
+            // Sørg for video starter fra begyndelsen
+            introVideo.currentTime = 0;
+
+            // Start video manuelt
+            introVideo.play().catch((e) => {
+                console.warn("Autoplay fejl: ", e);
+            });
+
+            // Fjern intro når video er færdig
+            introVideo.addEventListener('ended', () => {
+                introContainer.style.display = 'none';
+            });
+
+            // Eller automatisk efter f.eks. 2.5 sekunder:
+            setTimeout(() => {
+                introContainer.style.display = 'none';
+            }, 2500);
+        });
+    </script>
+</body>
+</html>
